@@ -15,7 +15,8 @@ from pathlib import Path
 
 tf.config.set_visible_devices([], "GPU")
 #data_path = "/run/user/1000040/gvfs/ftp:host=nas-irl.local/home/normal_rel_robot_data"
-data_path = "/home/shilber/rlds_conversion_test"
+#data_path = "/media/shilber/USB/normal_rel_robot_data/Tasse_aufstellen"
+data_path = "/media/shilber/USB/normal_rel_robot_data/Spielzeugbecher"
 # data_path = "/home/marcelr/uha_test_policy/finetune_data/delta_des_joint_state_euler"
 # data_path = "/media/irl-admin/93a784d0-a1be-419e-99bd-9b2cd9df02dc1/preprocessed_data/upgraded_lab/quaternions_fixed/sim_to_polymetis/delta_des_joint_state"
 
@@ -206,22 +207,18 @@ def _parse_example(episode_path, embed=None):
     for file in glob.glob(leader_path):
         name = 'des_' + Path(file).stem
         data.update({name : torch.load(file)})
+    if len(data) == 0:
+        print(episode_path)
+        return None,None
     trajectory_length = data[list(data.keys())[0]].size()[0]
 
     for feature in list(data.keys()):
+        data[f'delta_{feature}'] = torch.zeros_like(data[feature])
         for i in range(len(data[feature])):
-            data[f'delta_{feature}'] = torch.zeros_like(data[feature])
             if i == 0:
                 data[f'delta_{feature}'][i] = 0
             else:
                 data[f'delta_{feature}'][i] = data[feature][i] - data[feature][i-1]
-
-
-
-
-
-
-
 
     front_cam_path = os.path.join(episode_path, 'images/front')
     top_left_cam_path = os.path.join(episode_path, 'images/top_left')
@@ -248,9 +245,14 @@ def _parse_example(episode_path, embed=None):
         # action = np.append(action, data['des_gripper_width'][i])
         # action_abs = np.append(data['des_end_effector_pos'][i], abs_quat.as_euler("xyz"), axis=0)
         # action_abs = np.append(action_abs, data['des_gripper_width'][i])
-        action = data['delta_ee_pos'][i]
+        action = data['delta_ee_pos'][i][:3]
+        if torch.equal(torch.tensor([0,0,0,0]),data['delta_ee_pos'][i][3:]):
+            action = np.append(action, torch.tensor([0,0,0]))
+        else:
+            action = np.append(action, Rotation.from_quat(data['delta_ee_pos'][i][3:]).as_euler("xyz"))
         action = np.append(action, data['des_gripper_state'][i])
-        action_abs = data['des_ee_pos'][i]
+        action_abs = data['des_ee_pos'][i][:3]
+        action_abs = np.append(action_abs, Rotation.from_quat(data['des_ee_pos'][i][3:]).as_euler("xyz"))
         action_abs = np.append(action_abs, data['des_gripper_state'][i])
         # action = data['des_joint_state'][i]
 
@@ -258,16 +260,16 @@ def _parse_example(episode_path, embed=None):
             'observation': {
                 'image_front': data['image_front'][i],
                 'image_wrist': data['image_wrist'][i],
-                'image_top_right' : data['image_top_right'],
-                'image_top_left' : data['image_top_left'],
+                'image_top_right' : data['image_top_right'][i],
+                'image_top_left' : data['image_top_left'][i],
                 'joint_state': data['joint_pos'][i],
                 'joint_state_velocity': data['joint_vel'][i],
                 'end_effector_pos': data['ee_pos'][i][:3],
                 'end_effector_ori_quat': data['ee_pos'][i][3:], 
                 'end_effector_ori': Rotation.from_quat(data['ee_pos'][i][3:]).as_euler("xyz"),
             },
-            'action': action,
-            'action_abs': action_abs,
+            'action': np.float64(action),
+            'action_abs': np.float64(action_abs),
             'action_joint_state': data['des_joint_pos'][i],
             'action_joint_vel': data['des_joint_vel'][i],
             'action_gripper_width': data['des_gripper_state'][i],
@@ -320,4 +322,4 @@ if __name__ == "__main__":
     get_trajectorie_paths_recursive(data_path, raw_dirs)
     for trajectorie_path in tqdm(raw_dirs):
         _, sample = _parse_example(trajectorie_path)
-        # print(sample)
+        
