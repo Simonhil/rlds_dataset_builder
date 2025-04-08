@@ -41,7 +41,9 @@ class KitIrlRealKitchenLang(tfds.core.GeneratorBasedBuilder):
                         'is_last': tf.bool,
                         'observation': tfds.features.FeaturesDict({
                             'state': tfds.features.Tensor(shape=(14,), dtype=tf.float32),
-                            # 'images_top': tfds.features.Image(shape=(640, 480, 3), dtype=np.uint8)
+                            'images_top': tfds.features.Image(shape=(340, 420, 3), dtype=np.uint8),
+                            'images_wrist_left': tfds.features.Image(shape=(224, 224, 3), dtype=np.uint8),
+                            'images_wrist_right': tfds.features.Image(shape=(224, 224, 3), dtype=np.uint8),
                         }),
                         'action': tfds.features.Tensor(shape=(14,), dtype=tf.float32),
                         'reward': tfds.features.Tensor(shape=(), dtype=tf.float32),
@@ -69,7 +71,7 @@ class KitIrlRealKitchenLang(tfds.core.GeneratorBasedBuilder):
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
         """Define data splits."""
         return {
-            'train': self._generate_examples(data_path= "/home/sihi/delete/download/EXAMPLE"),
+            'train': self._generate_examples(data_path="/home/simonhilber/delete/test"),
             # 'val': self._generate_examples(path='data/val/episode_*.npy'),
         }
 
@@ -109,8 +111,9 @@ def _parse_example(episode_path, embed=None):
     # for file in glob.glob(episode_path):
     #     name = 'des_' + Path(file).stem
     #     data.update({name : torch.load(file)})
-    trajectory_length = data[list(data.keys())[0]].size()[0]
 
+    trajectory_length = len(data[list(data.keys())[0]])
+    
     for feature in list(data.keys()):
         for i in range(len(data[feature])):
             data[f'delta_{feature}'] = torch.zeros_like(data[feature])
@@ -124,21 +127,20 @@ def _parse_example(episode_path, embed=None):
 
 
 
-
-
-    # front_cam_path = os.path.join(episode_path, 'images/overhead_cam_orig')
-    # top_left_cam_path = os.path.join(episode_path, 'images/wrist_cam_left_orig')
-    # top_right_cam_path = os.path.join(episode_path, 'images/wrist_cam_right_orig')
-    # front_cam_vector = create_img_vector(front_cam_path, trajectory_length)
-    # top_left_cam_vector = create_img_vector(top_left_cam_path, trajectory_length)
-    # top_right_cam_vector = create_img_vector(top_right_cam_path, trajectory_length)
-    # # cam1_image_vector = create_img_vector(cam1_path, trajectory_length)
-    # # cam2_image_vector = create_img_vector(cam2_path, trajectory_length)
-    # data.update({
-    #             'image_top': front_cam_vector, 
-    #             'image_wrist_left' : top_left_cam_vector, 
-    #             'image_wrist_right' : top_right_cam_vector
-    #             })
+  
+    top_cam_path = os.path.join(episode_path, 'images/cam_high_orig')
+    wrist_left_cam_path = os.path.join(episode_path, 'images/cam_left_wrist_orig')
+    wrist_right_cam_path = os.path.join(episode_path, 'images/cam_right_wrist_orig')
+    top_cam_vector = create_img_vector(top_cam_path, trajectory_length)
+    wrist_left_cam_vector = create_img_vector(wrist_left_cam_path, trajectory_length)
+    wrist_right_cam_vector = create_img_vector(wrist_right_cam_path, trajectory_length)
+    # cam1_image_vector = create_img_vector(cam1_path, trajectory_length)
+    # cam2_image_vector = create_img_vector(cam2_path, trajectory_length)
+    data.update({
+                'image_top': top_cam_vector, 
+                'image_wrist_left' : wrist_left_cam_vector, 
+                'image_wrist_right' : wrist_right_cam_vector
+                })
     episode = []
     for i in range(trajectory_length):
         # compute Kona language embedding
@@ -166,14 +168,11 @@ def _parse_example(episode_path, embed=None):
         observation_all_joint[7:13] = data['follower_joint_pos'][i][6:]
         observation_all_joint[13] = data['follower_gripper_joint'][i][1]
 
-
-
         episode.append({
             'observation': {
-                # 'image_front': data['image_front'][i],
-                # 'image_wrist': data['image_wrist'][i],
-                # 'image_top_right' : data['image_top_right'],
-                # 'image_top_left' : data['image_top_left'],
+                'images_wrist_left': data['image_wrist_left'][i],
+                'images_wrist_right': data['image_wrist_right'][i],
+                'images_top' : data['image_top'][i],
                 'state': observation_all_joint,
                 # 'joint_state_velocity': data['joint_vel'][i],
                 # 'end_effector_pos': data['ee_pos'][i][:3],
@@ -193,7 +192,7 @@ def _parse_example(episode_path, embed=None):
             'is_first': i == 0,
             'is_last': i == (trajectory_length - 1),
             'is_terminal': i == (trajectory_length - 1),
-            'language_instruction': "transfer right to left ",
+            'language_instruction': "cube transfer right to left ",
             # 'language_instruction_2': data['language_description'][1],
             # 'language_instruction_3': data['language_description'][2],
             # 'language_embedding': language_embedding,
@@ -216,8 +215,10 @@ def _parse_example(episode_path, embed=None):
 
 def create_img_vector(img_folder_path, trajectory_length):
     cam_list = []
-    img_paths = glob.glob(os.path.join(img_folder_path, '*.png'))
+  
+    img_paths = glob.glob(os.path.join(img_folder_path, '*.jpg'))
     img_paths = natsort.natsorted(img_paths)
+   
     assert len(img_paths)==trajectory_length, "Number of images does not equal trajectory length!"
 
     for img_path in img_paths:
@@ -232,11 +233,11 @@ def get_trajectorie_paths_recursive(directory, sub_dir_list):
             sub_dir_list.append(directory) if entry == "images" else get_trajectorie_paths_recursive(full_path, sub_dir_list)
 
 if __name__ == "__main__":
-    data_path = "/home/sihi/delete/download/EXAMPLE"
+    data_path = "/home/simonhilber/delete/test"
     #embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
     # create list of all examples
     raw_dirs = []
     get_trajectorie_paths_recursive(data_path, raw_dirs)
     for trajectorie_path in tqdm(raw_dirs):
         _, sample = _parse_example(trajectorie_path)
-        # print(sample)
+        #print(sample)
