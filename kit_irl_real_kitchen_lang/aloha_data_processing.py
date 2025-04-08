@@ -34,28 +34,127 @@ class KitIrlRealKitchenLang(tfds.core.GeneratorBasedBuilder):
     def _info(self) -> tfds.core.DatasetInfo:
         """Dataset metadata (homepage, citation,...)."""
         return self.dataset_info_from_configs(
-           features=tfds.features.FeaturesDict({
-                'steps': tfds.features.Dataset(
-                    {
-                        'is_first': tf.bool,
-                        'is_last': tf.bool,
-                        'observation': tfds.features.FeaturesDict({
-                            'state': tfds.features.Tensor(shape=(14,), dtype=tf.float32),
-                            # 'images_top': tfds.features.Image(shape=(640, 480, 3), dtype=np.uint8)
-                        }),
-                        'action': tfds.features.Tensor(shape=(14,), dtype=tf.float32),
-                        'reward': tfds.features.Tensor(shape=(), dtype=tf.float32),
-                        'timestamp': tfds.features.Tensor(shape=(), dtype=tf.float32),
-                        'frame_index': tfds.features.Tensor(shape=(), dtype=tf.int32),
-                        'is_terminal': tfds.features.Tensor(shape=(), dtype=tf.bool),
-                        'language_instruction': tfds.features.Text(),
-                        'discount': tfds.features.Tensor(shape=(), dtype=tf.float32),
-                        # 'metadata': tfds.features.FeaturesDict({
-                        #     'episode_index': tfds.features.Tensor(shape=(), dtype=tf.int32)
-                        # }),
-                    }
-                ),
-                 'episode_metadata': tfds.features.FeaturesDict({
+            features=tfds.features.FeaturesDict({
+                'steps': tfds.features.Dataset({
+                    'observation': tfds.features.FeaturesDict({
+                        # 'image_front': tfds.features.Image(
+                        #     shape=(512, 512, 3),
+                        #     dtype=np.uint8,
+                        #     encoding_format='png',
+                        #     doc='Front camera RGB observation.',
+                        # ),
+                        # 'image_top_left': tfds.features.Image(
+                        #     shape=(512, 512, 3),
+                        #     dtype=np.uint8,
+                        #     encoding_format='png',
+                        #     doc='Top_left camera RGB observation.',
+                        # ),
+                        # 'image_top_right': tfds.features.Image(
+                        #     shape=(512, 512, 3),
+                        #     dtype=np.uint8,
+                        #     encoding_format='png',
+                        #     doc='Top_right camera RGB observation.',
+                        # ),
+                        # 'image_wrist': tfds.features.Image(
+                        #     shape=(512, 512, 3),
+                        #     dtype=np.uint8,
+                        #     encoding_format='png',
+                        #     doc='wrist camera RGB observation.',
+                        # ),
+                        'joint_state': tfds.features.Tensor(
+                            shape=(12,),
+                            dtype=np.float64,
+                            doc='Robot joint state. Consists of [7x joint states]',
+                        ),
+                        'joint_state_velocity': tfds.features.Tensor(
+                            shape=(12,),
+                            dtype=np.float64,
+                            doc='Robot joint velocities. Consists of [7x joint velocities]',
+                        ),
+                        'end_effector_pos': tfds.features.Tensor(
+                            shape=(6,),
+                            dtype=np.float64,
+                            doc='Current End Effector position in Cartesian space',
+                        ),
+                        'end_effector_ori': tfds.features.Tensor(
+                            shape=(6,),
+                            dtype=np.float64,
+                            doc='Current End Effector orientation in Cartesian space as Euler (xyz)',
+                        ),
+                        'end_effector_ori_quat': tfds.features.Tensor(
+                            shape=(8,),
+                            dtype=np.float64,
+                            doc='Current End Effector orientation in Cartesian space as Quaternion',
+                        )
+                    }),
+                    'action': tfds.features.Tensor(
+                        shape=(14,),
+                        dtype=np.float64,
+                        doc='Delta robot action, consists of [3x delta_end_effector_pos, '
+                            '3x delta_end_effector_ori (euler: roll, pitch, yaw), 1x des_gripper_width].',
+                    ),
+                    'action_abs': tfds.features.Tensor(
+                        shape=(14,),
+                        dtype=np.float64,
+                        doc='Absolute robot action, consists of [3x delta_end_effector_pos, '
+                            '3x delta_end_effector_ori (euler: roll, pitch, yaw), 1x des_gripper_width].',
+                    ),
+                    'action_joint_state': tfds.features.Tensor(
+                        shape=(14,),
+                        dtype=np.float64,
+                        doc='Robot action in joint space, consists of [7x joint states]',
+                    ),
+                    'action_joint_vel': tfds.features.Tensor(
+                        shape=(14,),
+                        dtype=np.float64,
+                        doc='Robot action in joint space, consists of [7x joint velocities]',
+                    ),
+                    'delta_des_joint_state': tfds.features.Tensor(
+                        shape=(14,),
+                        dtype=np.float64,
+                        doc='Delta robot action in joint space, consists of [7x joint states]',
+                    ),
+                    'action_gripper_width': tfds.features.Scalar(
+                        dtype=np.float64,
+                        doc='Desired gripper width, consists of [1x gripper width] in range [0, 1]',
+                    ),
+                    'discount': tfds.features.Scalar(
+                        dtype=np.float64,
+                        doc='Discount if provided, default to 1.'
+                    ),
+                    'reward': tfds.features.Scalar(
+                        dtype=np.float64,
+                        doc='Reward if provided, 1 on final step for demos.'
+                    ),
+                    'is_first': tfds.features.Scalar(
+                        dtype=np.bool_,
+                        doc='True on first step of the episode.'
+                    ),
+                    'is_last': tfds.features.Scalar(
+                        dtype=np.bool_,
+                        doc='True on last step of the episode.'
+                    ),
+                    'is_terminal': tfds.features.Scalar(
+                        dtype=np.bool_,
+                        doc='True on last step of the episode if it is a terminal step, True for demos.'
+                    ),
+                    # """ 'language_instruction': tfds.features.Text(
+                    #     doc='Language Instruction.'
+                    # ),
+                    # 'language_instruction_2': tfds.features.Text(
+                    #     doc='Language Instruction.'
+                    # ),
+                    # 'language_instruction_3': tfds.features.Text(
+                    #     doc='Language Instruction.'
+                    # ),
+                    # 'language_embedding': tfds.features.Tensor(
+                    #     shape=(3, 512),
+                    #     dtype=np.float32,
+                    #     doc='Kona language embedding. '
+                    #         'See https://tfhub.dev/google/universal-sentence-encoder-large/5'
+                    # ), """
+                }),
+                'episode_metadata': tfds.features.FeaturesDict({
                     'file_path': tfds.features.Text(
                         doc='Path to the original data file.',
                     ),
@@ -64,16 +163,16 @@ class KitIrlRealKitchenLang(tfds.core.GeneratorBasedBuilder):
                         doc='Number of samples in trajectorie'
                     )
                 }),
-            }),
-        )
+            }))
+
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
         """Define data splits."""
         return {
-            'train': self._generate_examples(data_path= "/home/sihi/delete/download/EXAMPLE"),
+            'train': self._generate_examples(path=data_path),
             # 'val': self._generate_examples(path='data/val/episode_*.npy'),
         }
 
-    def _generate_examples(self, data_path) -> Iterator[Tuple[str, Any]]:
+    def _generate_examples(self, path) -> Iterator[Tuple[str, Any]]:
         """Generator of examples for each split."""
 
         # create list of all examples
@@ -198,7 +297,6 @@ def _parse_example(episode_path, embed=None):
             # 'language_instruction_3': data['language_description'][2],
             # 'language_embedding': language_embedding,
             'frame_index': i,
-            'timestamp':i
             #'metadata': {'episode_index': df['episode_index'][step_idx]}
         })
 
