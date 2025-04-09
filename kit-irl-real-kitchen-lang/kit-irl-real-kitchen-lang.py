@@ -41,7 +41,7 @@ class KitIrlRealKitchenLang(tfds.core.GeneratorBasedBuilder):
                         'is_last': tf.bool,
                         'observation': tfds.features.FeaturesDict({
                             'state': tfds.features.Tensor(shape=(14,), dtype=tf.float32),
-                            'images_top': tfds.features.Image(shape=(340, 420, 3), dtype=np.uint8),
+                            'images_top': tfds.features.Image(shape=(224, 224, 3), dtype=np.uint8), #(340, 420, 3)
                             'images_wrist_left': tfds.features.Image(shape=(224, 224, 3), dtype=np.uint8),
                             'images_wrist_right': tfds.features.Image(shape=(224, 224, 3), dtype=np.uint8),
                         }),
@@ -71,7 +71,7 @@ class KitIrlRealKitchenLang(tfds.core.GeneratorBasedBuilder):
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
         """Define data splits."""
         return {
-            'train': self._generate_examples(data_path="/home/simonhilber/delete/test"),
+            'train': self._generate_examples(data_path='/home/i53/student/shilber/delete/50_easy_transfer'),
             # 'val': self._generate_examples(path='data/val/episode_*.npy'),
         }
 
@@ -84,20 +84,20 @@ class KitIrlRealKitchenLang(tfds.core.GeneratorBasedBuilder):
         print("# of trajectories:", len(raw_dirs))
 
         # for smallish datasets, use single-thread parsing
-        for sample in raw_dirs:
-            yield _parse_example(sample, self._embed)
+        # for sample in raw_dirs:
+        #     yield _parse_example(sample, self._embed)
 
         # for large datasets use beam to parallelize data parsing (this will have initialization overhead)
-        # beam = tfds.core.lazy_imports.apache_beam
-        # return (
-        #         beam.Create(episode_paths)
-        #         | beam.Map(_parse_example)
-        # )
+        beam = tfds.core.lazy_imports.apache_beam
+        return (
+                beam.Create(raw_dirs)
+                | beam.Map(_parse_example)
+        )
 
 def _parse_example(episode_path, embed=None):
     data = {}
-    leader_path = os.path.join(episode_path, 'leader/*.pt')
-    follower_path = os.path.join(episode_path, 'follower/*.pt')
+    # leader_path = os.path.join(episode_path, 'leader/*.pt')
+    # follower_path = os.path.join(episode_path, 'follower/*.pt')
     path = os.path.join(episode_path,'*.pt')
     #path = os.path.join(episode_path, "*.pickle")
     for file in glob.glob(path):
@@ -128,9 +128,12 @@ def _parse_example(episode_path, embed=None):
 
 
   
-    top_cam_path = os.path.join(episode_path, 'images/cam_high_orig')
-    wrist_left_cam_path = os.path.join(episode_path, 'images/cam_left_wrist_orig')
-    wrist_right_cam_path = os.path.join(episode_path, 'images/cam_right_wrist_orig')
+    top_cam_path = os.path.join(episode_path, 'images/overhead_cam_orig')
+    wrist_left_cam_path = os.path.join(episode_path, 'images/wrist_cam_left_orig')
+    wrist_right_cam_path = os.path.join(episode_path, 'images/wrist_cam_right_orig')
+    # top_cam_path = os.path.join(episode_path, 'images/cam_high_orig')
+    # wrist_left_cam_path = os.path.join(episode_path, 'images/cam_left_wrist_orig')
+    # wrist_right_cam_path = os.path.join(episode_path, 'images/cam_right_wrist_orig')
     top_cam_vector = create_img_vector(top_cam_path, trajectory_length)
     wrist_left_cam_vector = create_img_vector(wrist_left_cam_path, trajectory_length)
     wrist_right_cam_vector = create_img_vector(wrist_right_cam_path, trajectory_length)
@@ -233,7 +236,7 @@ def get_trajectorie_paths_recursive(directory, sub_dir_list):
             sub_dir_list.append(directory) if entry == "images" else get_trajectorie_paths_recursive(full_path, sub_dir_list)
 
 if __name__ == "__main__":
-    data_path = "/home/simonhilber/delete/test"
+    data_path = "/home/i53/student/shilber/delete/50_easy_transfer"
     #embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
     # create list of all examples
     raw_dirs = []

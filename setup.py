@@ -1,3 +1,3 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
-setup(name="<name_of_your_dataset>", packages=["<name_of_your_dataset>"])
+setup(name="kit-irl-real-kitchen-lang",version="0.0.1", packages=find_packages())
