@@ -84,15 +84,15 @@ class KitIrlRealKitchenLang(tfds.core.GeneratorBasedBuilder):
         print("# of trajectories:", len(raw_dirs))
 
         # for smallish datasets, use single-thread parsing
-        # for sample in raw_dirs:
-        #     yield _parse_example(sample, self._embed)
+        for sample in raw_dirs:
+            yield _parse_example(sample, self._embed)
 
         # for large datasets use beam to parallelize data parsing (this will have initialization overhead)
-        beam = tfds.core.lazy_imports.apache_beam
-        return (
-                beam.Create(raw_dirs)
-                | beam.Map(_parse_example)
-        )
+        # beam = tfds.core.lazy_imports.apache_beam
+        # return (
+        #         beam.Create(raw_dirs)
+        #         | beam.Map(_parse_example)
+        # )
 
 def _parse_example(episode_path, embed=None):
     data = {}
