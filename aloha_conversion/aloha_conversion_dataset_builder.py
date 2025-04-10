@@ -23,6 +23,21 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
     # creating one shared model outside this function would cause a deadlock
     _embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
     episode_index = 0
+
+
+
+    def create_img_vector(img_folder_path, trajectory_length):
+        cam_list = []
+    
+        img_paths = glob.glob(os.path.join(img_folder_path, '*.jpg'))
+        img_paths = natsort.natsorted(img_paths)
+        assert len(img_paths)==trajectory_length,  "Number of images does not equal trajectory length!" + str(img_folder_path) + "\n\n" + str(trajectory_length)
+
+        for img_path in img_paths:
+            img_array = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_RGB2BGR)
+            cam_list.append(img_array)
+        return cam_list
+
     def _parse_example(episode_path):
         # load raw data --> this should change for your dataset
         
@@ -42,7 +57,6 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         # for file in glob.glob(episode_path):
         #     name = 'des_' + Path(file).stem
         #     data.update({name : torch.load(file)})
-       
         trajectory_length = len(data[list(data.keys())[0]])
 
 
@@ -57,6 +71,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         wrist_right_cam_vector = create_img_vector(wrist_right_cam_path, trajectory_length)
         # cam1_image_vector = create_img_vector(cam1_path, trajectory_length)
         # cam2_image_vector = create_img_vector(cam2_path, trajectory_length)
+       
         data.update({
                     'image_top': top_cam_vector, 
                     'image_wrist_left' : wrist_left_cam_vector, 
@@ -144,8 +159,7 @@ def create_img_vector(img_folder_path, trajectory_length):
   
     img_paths = glob.glob(os.path.join(img_folder_path, '*.jpg'))
     img_paths = natsort.natsorted(img_paths)
-   
-    assert len(img_paths)==trajectory_length, "Number of images does not equal trajectory length!"
+    assert len(img_paths)==trajectory_length,  "Number of images does not equal trajectory length!" + str(img_folder_path) + "\n\n" + str(trajectory_length)
 
     for img_path in img_paths:
         img_array = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_RGB2BGR)
