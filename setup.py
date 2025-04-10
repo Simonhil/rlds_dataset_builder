@@ -1,3 +1,3 @@
 from setuptools import setup
 
-setup(name="example_dataset", packages=["example_dataset"])
+setup(name="aloha_conversion", packages=["aloha_conversion"])

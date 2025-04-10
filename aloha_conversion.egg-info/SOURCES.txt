@@ -1,0 +1,11 @@
+LICENSE
+README.md
+setup.py
+aloha_conversion/__init__.py
+aloha_conversion/aloha_conversion_dataset_builder.py
+aloha_conversion/conversion_utils.py
+aloha_conversion/create_example_data.py
+aloha_conversion.egg-info/PKG-INFO
+aloha_conversion.egg-info/SOURCES.txt
+aloha_conversion.egg-info/dependency_links.txt
+aloha_conversion.egg-info/top_level.txt
